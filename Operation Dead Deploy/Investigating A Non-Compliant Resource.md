@@ -8,10 +8,12 @@ In a live multi-user Azure training tenant, maintaining reader access over the M
 ## Investigation
 1. Navigated to Resource Groups in the Azure portal to gain an inventory of the rgs in the environment. It is immediately apparent that there is an anomaly in the list that doesn't follow the organizations required naming convention. 
 
+<br>
 
 ![](attachments/Pasted%20image%2020260913213551.png)
 
 
+<br>
 
 In AzureCLI:
 
@@ -19,11 +21,15 @@ In AzureCLI:
 Get-AzResourceGroup | Select-Object ResourceGroupName, Location
 ```
 
+---
  
  2. Proceeded to look into the RG using the incorrect naming convention, there is one resource created that provides the answer as to who was responsible for its inception. Through the tags, it can be seen that the storage account was created by an intern at 05/04/2026 at 02:42:25 PM. 
  
+<br>
 
 ![](attachments/Pasted%20image%2020260913214614.png)
+
+<br>
 
 
 In AzureCLI:
@@ -32,26 +38,34 @@ In AzureCLI:
 Get-AzResource -ResourceGroupName <rg_name> | Select-Object ResourceName, Kind, Location, TagsTable | Format-List
 ```
 
+---
+
 3. Following the finding of a storage account, the next step is identifying the audit trail of the resource through the Deployments section that can be located on the rg's overview page.
+<br>
 
 ![](attachments/Pasted%20image%2020260913215911.png)
 
+<br>
 
-In AzureCLI
+
+In AzureCLI:
 
 ```Powershell
 Get-AzResourceGroupDeployment -ResourceGroupName <rg_name> | Select-Object DeploymentName, Timestamp, ProvisioningState, Mode, CorrelationId
 ```
 
-<br>
+---
 
 
 4. Finally, it is necessary to know why this rg was able to be created in the first place with the incorrect naming convention. By navigating to the Policy blade on the rg, there is a Naming Convention policy in effect that requires all rgs to use the naming convention "rg-\*" . When observing the policy, it can be seen that the effect type is on Audit and not Enforced, therefore the out of compliance rg was allowed to be created.       
 
+<br>
 
 ![](attachments/Pasted%20image%2020260913221457.png)
 
-In AzureCLI (Validated AI Command Flow)
+
+<br>
+In AzureCLI (Validated AI Command Flow):
 	
 
 ```Powershell
@@ -82,7 +96,11 @@ $d.PolicyRule | ConvertTo-Json -Depth 10
 Get-AzPolicyState -ResourceGroupName $rg | Where PolicyAssignmentName -eq $a.Name | Select PolicyAssignmentName, PolicyDefinitionAction, ComplianceState, ResourceId
 ```
 
+<br>
+
 ![](attachments/Pasted%20image%2020260914204621.png)
+
+<br>
 
 ## What broke / what surprised me
 This wasn't a sophisticated adversary that spun up a new rg and deployed a storage account for data exfiltration. This was an intern given excessive permissions with no oversight, whom created a non-compliant object. Additionally, this was able to happen through a misconfiguration in policy that allowed the improperly named rg to be created. 
